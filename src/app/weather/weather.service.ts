@@ -1,14 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { pipe, Observable, observable } from 'rxjs';
-import {map, switchMap} from 'rxjs/operators';
-import {ForecastResult} from './forecast';
+import { pipe, Observable, observable, of } from 'rxjs';
+import {map, switchMap, pluck, filter, mergeMap, toArray} from 'rxjs/operators';
+import {ForecastResult, ForecastResponse} from './forecast';
 @Injectable({
   providedIn: 'root'
 })
 export class WeatherService {
   readonly apiKey = '6a4a0aa536d023adc8b668e54ea47442';
-  readonly baseApiUrl = 'api.openweathermap.org/data/2.5';
+  readonly baseApiUrl = 'https://api.openweathermap.org/data/2.5';
   constructor(private http: HttpClient) { }
 
   getFiveDayForecast(lat: number, long: number): Observable<ForecastResult>{
@@ -17,15 +17,28 @@ export class WeatherService {
     return this.http.get<ForecastResult>(apiUrl);
   }
 
-  getForecast(): void {
-    this.getCurrentPosition().pipe(
+  // tslint:disable-next-line:typedef
+  getForecast(): Observable<ForecastResponse[]> {
+    const apiUrl = `${this.baseApiUrl}/forecast`;
+    return this.getCurrentPosition().pipe(
       map(coords => {
         return new HttpParams()
         .set('lat', coords.latitude.toString())
         .set('lon', coords.longitude.toString())
         .set('units', 'metric')
         .set('appid', this.apiKey);
-      })
+      }),
+      switchMap(params => this.http.get<ForecastResult>(apiUrl, { params })), // use this as the new active observable
+      pluck('list'),
+      mergeMap(value => of(...value)), // break down array into a stream of individual values so it's easier to filter
+      filter((value, index) => index % 8 === 0), // filter the stream of values
+      map((value) => {
+        return {
+          dateString: value.dt_txt,
+          temp: value.main.temp
+        };
+      }),
+      toArray()
     );
   }
 
