@@ -3,13 +3,15 @@ import { NgModule } from '@angular/core';
 
 import { AppComponent } from './app.component';
 import { WeatherModule } from './weather/weather.module';
+import { NotificationsModule } from './notifications/notifications.module';
 @NgModule({
   declarations: [
     AppComponent
   ],
   imports: [
     BrowserModule,
-    WeatherModule
+    WeatherModule,
+    NotificationsModule
   ],
   providers: [],
   bootstrap: [AppComponent]
